@@ -1,21 +1,31 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "SimpleOSMRenderer"
 version = "0.1.0"
-description = "Simple renderer for route frames to interactive HTML maps using Folium"
+authors = [
+    {name="Lougine Shalaby", email="login.shalby@dfki.de"},
+    {name="Gerrit Grossmann", email="gerrit.grossmann@dfki.de"}, 
+]
+description = "A simple OSM-based renderer using Folium"
 readme = "README.md"
 requires-python = ">=3.8"
-license = { text = "MIT" }
-authors = [{ name = "Your Name", email = "you@example.com" }]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = ["folium>=0.15"]
+dependencies = [
+    "folium>=0.14.0",
+    "numpy>=1.21.0",
+    "python-dotenv>=0.19.0",
+]
 
-[project.scripts]
-simpleosmrenderer = "simpleosmrenderer.renderer:main"
+[project.optional-dependencies]
+test = ["pytest>=6.0.0", "pytest-cov>=2.0.0"]
+dev = ["black", "flake8", "isort"]
+
+[project.urls]
+Homepage = "https://github.com/gerritgr/SimpleOSMRenderer"
