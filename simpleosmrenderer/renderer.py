@@ -1,18 +1,30 @@
-"""SimpleOSMRenderer – generate interactive Folium maps
-from a JSON description of frames/tags/lines.
-
-Command-line usage (after installation):
-    $ simpleosmrenderer --input_file route.json --output_dir route_output
 """
+Simple OSM Renderer using Folium
+
+A Python package for rendering OpenStreetMap data and custom routes using Folium maps.
+"""
+
 import json
 import os
 import folium
 from pathlib import Path
-import argparse
+from typing import List, Dict, Optional, Tuple
 
-GOOGLE_MAPS_API_KEY = ''
+# Constants
+GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY', '')
+DEFAULT_INPUT_FILE = "route.json"
+DEFAULT_OUTPUT_DIR = "route_output"
 
-def summarize_frames(frames):
+def summarize_frames(frames: List[Dict]) -> str:
+    """
+    Generate an HTML summary of all frames/events.
+    
+    Args:
+        frames: List of frame dictionaries from JSON input
+        
+    Returns:
+        HTML string with all frames listed
+    """
     html = []
     html.append("<!DOCTYPE html>")
     html.append("<html>")
@@ -50,20 +62,31 @@ def summarize_frames(frames):
     html.append("</div>")
     html.append("</body>")
     html.append("</html>")
-    return "\\n".join(html)
+    return "\n".join(html)
 
-def color_hex_to_folium_icon(hex_color):
+def color_hex_to_folium_icon(hex_color: str) -> str:
+    """
+    Convert hex color code to nearest named Folium icon color.
+    
+    Args:
+        hex_color: Color in hex format (e.g., '#FF0000' or 'FF0000')
+        
+    Returns:
+        Closest named Folium color (e.g., 'red')
+    """
     c = hex_color.strip().lower()
     if c.startswith("#"):
         c = c[1:]
     if len(c) == 3:
         c = "".join(ch*2 for ch in c)
+    
     try:
         r = int(c[0:2], 16)
         g = int(c[2:4], 16)
         b = int(c[4:6], 16)
     except ValueError:
         return "blue"
+    
     named_colors = {
         "red": (255, 0, 0), "blue": (0, 0, 255), "green": (0, 255, 0),
         "purple": (128, 0, 128), "orange": (255, 165, 0), "darkred": (139, 0, 0),
@@ -74,6 +97,7 @@ def color_hex_to_folium_icon(hex_color):
         "lightblue": (173, 216, 230), "lightgreen": (144, 238, 144),
         "gray": (128, 128, 128), "black": (0, 0, 0), "lightgray": (211, 211, 211),
     }
+    
     best_color = "blue"
     best_dist = float("inf")
     for name, (nr, ng, nb) in named_colors.items():
@@ -83,54 +107,44 @@ def color_hex_to_folium_icon(hex_color):
             best_color = name
     return best_color
 
-def create_map_for_frame(frame, global_bounds, output_path):
+def create_map_for_frame(frame: Dict, global_bounds: Optional[List[List[float]]], output_path: str) -> None:
+    """
+    Generate a Folium map for a single frame.
+    
+    Args:
+        frame: Dictionary containing frame data
+        global_bounds: Fallback map bounds [[min_lat, min_lng], [max_lat, max_lng]]
+        output_path: Path to save the HTML file
+    """
     all_coords = []
     for tag in frame.get("tags", []):
         all_coords.append(tag["position"])
     for line in frame.get("lines", []):
         all_coords.append(line["start"])
         all_coords.append(line["end"])
-    if GOOGLE_MAPS_API_KEY:
+    
+    # Initialize map with appropriate tiles
+    if GOOGLE_MAPS_API_KEY: 
         tile_url = f"https://mt1.google.com/vt/lyrs=m&x={{x}}&y={{y}}&z={{z}}&key={GOOGLE_MAPS_API_KEY}"
-        if all_coords:
-            lats, lngs = zip(*all_coords)
-            frame_bounds = [[min(lats), min(lngs)], [max(lats), max(lngs)]]
-            m = folium.Map(tiles=None)
-            folium.TileLayer(
-                tiles=tile_url,
-                attr="Google Maps",
-                name="Google Maps",
-                control=True
-            ).add_to(m)
-            m.fit_bounds(frame_bounds)
-        elif global_bounds:
-            m = folium.Map(tiles=None)
-            folium.TileLayer(
-                tiles=tile_url,
-                attr="Google Maps",
-                name="Google Maps",
-                control=True
-            ).add_to(m)
-            m.fit_bounds(global_bounds)
-        else:
-            m = folium.Map(tiles=None)
-            folium.TileLayer(
-                tiles=tile_url,
-                attr="Google Maps",
-                name="Google Maps",
-                control=True
-            ).add_to(m)
+        m = folium.Map(tiles=None)
+        folium.TileLayer(
+            tiles=tile_url,
+            attr="Google Maps",
+            name="Google Maps",
+            control=True
+        ).add_to(m)
     else:
-        if all_coords:
-            lats, lngs = zip(*all_coords)
-            frame_bounds = [[min(lats), min(lngs)], [max(lats), max(lngs)]]
-            m = folium.Map()
-            m.fit_bounds(frame_bounds)
-        elif global_bounds:
-            m = folium.Map()
-            m.fit_bounds(global_bounds)
-        else:
-            m = folium.Map()
+        m = folium.Map()
+    
+    # Set map bounds
+    if all_coords:
+        lats, lngs = zip(*all_coords)
+        frame_bounds = [[min(lats), min(lngs)], [max(lats), max(lngs)]]
+        m.fit_bounds(frame_bounds)
+    elif global_bounds:
+        m.fit_bounds(global_bounds)
+    
+    # Add markers
     for tag in frame.get("tags", []):
         lat, lng = tag["position"]
         icon_type = tag.get("icon", "info-sign")
@@ -143,82 +157,60 @@ def create_map_for_frame(frame, global_bounds, output_path):
             popup=popup_str,
             icon=folium.Icon(color=folium_color, icon=icon_type, prefix="fa")
         ).add_to(m)
+    
+    # Add lines
     for line in frame.get("lines", []):
-        start_lat, start_lng = line["start"]
-        end_lat, end_lng = line["end"]
-        line_color_hex = line["color"]
         folium.PolyLine(
-            locations=[(start_lat, start_lng), (end_lat, end_lng)],
-            color=line_color_hex,
+            locations=[line["start"], line["end"]],
+            color=line["color"],
             weight=4
         ).add_to(m)
 
     m.save(output_path)
 
-def main(argv=None):
-    parser = argparse.ArgumentParser(
-        description="Generate Folium maps from frames JSON data"
-    )
-    parser.add_argument(
-        "--input_file", type=str, default="route.json",
-        help="JSON file containing frames data (default: route.json)"
-    )
-    parser.add_argument(
-        "--output_dir", type=str, default="route_output",
-        help="Output directory to save maps (default: route_output)"
-    )
-    args = parser.parse_args(argv)
-
-    input_file = Path(args.input_file)
-    output_dir = Path(args.output_dir)
-
-    with input_file.open("r", encoding="utf-8") as f:
-        data = json.load(f)
-    frames = data["frames"]
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Compute global bounding box as fallback
-    min_lat, max_lat = 90.0, -90.0
-    min_lng, max_lng = 180.0, -180.0
-    for frame in frames:
-        for tag in frame.get("tags", []):
-            lat, lng = tag["position"]
-            min_lat = min(min_lat, lat)
-            max_lat = max(max_lat, lat)
-            min_lng = min(min_lng, lng)
-            max_lng = max(max_lng, lng)
-        for line in frame.get("lines", []):
-            slat, slng = line["start"]
-            elat, elng = line["end"]
-            min_lat = min(min_lat, slat, elat)
-            max_lat = max(max_lat, slat, elat)
-            min_lng = min(min_lng, slng, elng)
-            max_lng = max(max_lng, slng, elng)
-    global_bounds = (
-        [[min_lat, min_lng], [max_lat, max_lng]]
-        if min_lat <= max_lat and min_lng <= max_lng
-        else None
-    )
-
-    all_frames_html = summarize_frames(frames)
-    (output_dir / "all_frames.html").write_text(all_frames_html, encoding="utf-8")
-
-    for i, frame in enumerate(frames):
-        map_filename = f"event_{i}.html"
-        create_map_for_frame(frame, global_bounds, output_dir / map_filename)
-
-    total_frames = len(frames)
-    master_html = f"""<!DOCTYPE html>
+def generate_master_html(output_dir: str, total_frames: int) -> None:
+    """
+    Create the master HTML file that controls all frames.
+    
+    Args:
+        output_dir: Directory to save the file
+        total_frames: Number of frames available
+    """
+    master_html_path = os.path.join(output_dir, "_master.html")
+    with open(master_html_path, "w", encoding="utf-8") as f:
+        f.write(f"""<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
   <title>Frames Master View</title>
   <style>
-    body {{margin:0;padding:0;display:flex;flex-direction:column;height:100vh;}}
-    #controls {{background:#ececec;padding:5px;flex:0 0 auto;}}
-    #mainContainer {{flex:1 1 auto;display:flex;flex-direction:row;height:calc(100vh - 40px);}}
-    #leftPane,#rightPane {{flex:1 1 50%;border:none;}}
-    button {{margin:0 10px;padding:6px 12px;cursor:pointer;}}
+    body {{
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }}
+    #controls {{
+      background: #ececec;
+      padding: 5px;
+      flex: 0 0 auto;
+    }}
+    #mainContainer {{
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: row;
+      height: calc(100vh - 40px);
+    }}
+    #leftPane, #rightPane {{
+      flex: 1 1 50%;
+      border: none;
+    }}
+    button {{
+      margin: 0 10px;
+      padding: 6px 12px;
+      cursor: pointer;
+    }}
   </style>
 </head>
 <body>
@@ -227,30 +219,98 @@ def main(argv=None):
     <span id="info"></span>
     <button id="nextBtn">Next</button>
   </div>
+
   <div id="mainContainer">
     <iframe id="leftPane"></iframe>
     <iframe id="rightPane"></iframe>
   </div>
+
   <script>
     let current = 0;
     let maxIndex = {total_frames} - 1;
     const leftFrame = document.getElementById('leftPane');
     const rightFrame = document.getElementById('rightPane');
     const infoSpan = document.getElementById('info');
+
     function updateView() {{
       leftFrame.src = "event_" + current + ".html";
       rightFrame.src = "all_frames.html#frame" + current;
       infoSpan.textContent = "Frame " + current + " / " + maxIndex;
     }}
-    document.getElementById('prevBtn').onclick = () => {{ if (current>0) {{--current;updateView();}} }};
-    document.getElementById('nextBtn').onclick = () => {{ if (current<maxIndex) {{++current;updateView();}} }};
+
+    document.getElementById('prevBtn').addEventListener('click', () => {{
+      if (current > 0) {{
+        current--;
+        updateView();
+      }}
+    }});
+
+    document.getElementById('nextBtn').addEventListener('click', () => {{
+      if (current < maxIndex) {{
+        current++;
+        updateView();
+      }}
+    }});
+
     updateView();
   </script>
 </body>
-</html>"""
-    (output_dir / "_master.html").write_text(master_html, encoding="utf-8")
+</html>
+""")
 
-    print(f"Done! Open '{output_dir / '_master.html'}' in your browser.")
-    print("Use the Previous/Next buttons to scroll through frames.")
+def main(input_file: str = DEFAULT_INPUT_FILE, output_dir: str = DEFAULT_OUTPUT_DIR) -> None:
+    """
+    Main function to render OSM data from JSON to interactive maps.
+    
+    Args:
+        input_file: Path to JSON input file (default: 'route.json')
+        output_dir: Output directory for HTML files (default: 'route_output')
+    """
+    with open(input_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    frames = data["frames"]
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Calculate global bounds as fallback
+    all_coords = []
+    for frame in frames:
+        for tag in frame.get("tags", []):
+            all_coords.append(tag["position"])
+        for line in frame.get("lines", []):
+            all_coords.append(line["start"])
+            all_coords.append(line["end"])
+    
+    if all_coords:
+        lats, lngs = zip(*all_coords)
+        global_bounds = [[min(lats), min(lngs)], [max(lats), max(lngs)]]
+    else:
+        global_bounds = None
+
+    # Generate summary HTML
+    all_frames_html = summarize_frames(frames)
+    with open(os.path.join(output_dir, "all_frames.html"), "w", encoding="utf-8") as f:
+        f.write(all_frames_html)
+
+    # Generate individual maps
+    for i, frame in enumerate(frames):
+        create_map_for_frame(
+            frame=frame,
+            global_bounds=global_bounds,
+            output_path=os.path.join(output_dir, f"event_{i}.html")
+        )
+
+    # Generate master controller
+    generate_master_html(output_dir, len(frames))
+
+    print(f"Rendering complete! Open '{os.path.join(output_dir, '_master.html')}' in your browser.")
+    print("Use the Previous/Next buttons to navigate between frames.")
+
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description="OSM Renderer using Folium")
+    parser.add_argument("--input", default=DEFAULT_INPUT_FILE, help="Input JSON file")
+    parser.add_argument("--output", default=DEFAULT_OUTPUT_DIR, help="Output directory")
+    args = parser.parse_args()
+    
+    main(input_file=args.input, output_dir=args.output)
