@@ -1,6 +1,4 @@
 
-
-```markdown
 # SimpleOSMRenderer
 
 ![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
@@ -8,6 +6,7 @@
 
 A lightweight Python package for rendering OpenStreetMap data and custom routes as interactive Folium maps. Perfect for visualizing geographic routes, points of interest, and movement patterns.
 
+---
 ## Features
 
 - Convert JSON route data to interactive HTML maps
@@ -16,12 +15,15 @@ A lightweight Python package for rendering OpenStreetMap data and custom routes 
 - Master view with frame navigation
 - Optional Google Maps tile integration
 
+---
+
 ## Installation
 
 ### From GitHub
 ```bash
 pip install git+https://github.com/gerritgr/SimpleOSMRenderer.git
 ```
+---
 
 ### For Development
 ```bash
@@ -29,6 +31,7 @@ git clone https://github.com/gerritgr/SimpleOSMRenderer.git
 cd SimpleOSMRenderer
 pip install -e ".[test]"  # Install with test dependencies
 ```
+---
 
 ## Quick Start
 
@@ -68,6 +71,8 @@ Your JSON file should follow this structure:
   ]
 }
 ```
+
+---
 
 ## Advanced Usage
 
