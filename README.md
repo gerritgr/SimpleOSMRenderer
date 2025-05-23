@@ -35,7 +35,7 @@ pip install -e ".[test]"  # Install with test dependencies
 1. Prepare your route data as JSON ([example format](#input-format))
 2. Render maps:
 ```python
-from SimpleOSMRenderer import main
+from simpleosmrenderer.renderer import main
 
 main(input_file="your_data.json", output_dir="maps")
 ```
@@ -80,7 +80,7 @@ os.environ['GOOGLE_MAPS_API_KEY'] = 'your_key_here'
 
 ### Programmatic Access
 ```python
-from SimpleOSMRenderer.renderer import create_map_for_frame
+from simpleosmrenderer.renderer import create_map_for_frame
 
 frame = {...}  # Your frame data
 create_map_for_frame(frame, output_path="custom_map.html")
