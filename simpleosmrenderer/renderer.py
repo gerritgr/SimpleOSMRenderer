@@ -258,7 +258,7 @@ def generate_master_html(output_dir: str, total_frames: int) -> None:
 </html>
 """)
 
-def main(input_file: str = DEFAULT_INPUT_FILE, output_dir: str = DEFAULT_OUTPUT_DIR) -> None:
+def render_osm_maps(input_file: str = DEFAULT_INPUT_FILE, output_dir: str = DEFAULT_OUTPUT_DIR) -> None:
     """
     Main function to render OSM data from JSON to interactive maps.
     
@@ -313,4 +313,4 @@ if __name__ == "__main__":
     parser.add_argument("--output", default=DEFAULT_OUTPUT_DIR, help="Output directory")
     args = parser.parse_args()
     
-    main(input_file=args.input, output_dir=args.output)
+    render_osm_maps(input_file=args.input, output_dir=args.output)
