@@ -67,13 +67,18 @@ def summarize_frames(frames: List[Dict]) -> str:
 def color_hex_to_folium_icon(hex_color: str) -> str:
     """
     Convert hex color code to nearest named Folium icon color.
-    
+
     Args:
         hex_color: Color in hex format (e.g., '#FF0000' or 'FF0000')
-        
+
     Returns:
         Closest named Folium color (e.g., 'red')
     """
+    # --- CHECK ---
+    if hex_color is None or not isinstance(hex_color, str) or not hex_color.strip():
+        return "blue" # Return the default blue color as per test expectation
+    # ----------------------
+
     c = hex_color.strip().lower()
     if c.startswith("#"):
         c = c[1:]
@@ -95,7 +100,7 @@ def color_hex_to_folium_icon(hex_color: str) -> str:
         "cadetblue": (95, 158, 160), "darkpurple": (48, 25, 52),
         "white": (255, 255, 255), "pink": (255, 192, 203),
         "lightblue": (173, 216, 230), "lightgreen": (144, 238, 144),
-        "gray": (128, 128, 128), "black": (0, 0, 0), "lightgray": (211, 211, 211),
+        "gray": (128, 128, 128), "black": (0, 0, 0), "lightgray": (211, 211, 211),"yellow": (255, 255, 0),
     }
     
     best_color = "blue"
@@ -258,7 +263,7 @@ def generate_master_html(output_dir: str, total_frames: int) -> None:
 </html>
 """)
 
-def main(input_file: str = DEFAULT_INPUT_FILE, output_dir: str = DEFAULT_OUTPUT_DIR) -> None:
+def render_osm_maps(input_file: str = DEFAULT_INPUT_FILE, output_dir: str = DEFAULT_OUTPUT_DIR) -> None:
     """
     Main function to render OSM data from JSON to interactive maps.
     
@@ -313,4 +318,4 @@ if __name__ == "__main__":
     parser.add_argument("--output", default=DEFAULT_OUTPUT_DIR, help="Output directory")
     args = parser.parse_args()
     
-    main(input_file=args.input, output_dir=args.output)
+    render_osm_maps(input_file=args.input, output_dir=args.output)
